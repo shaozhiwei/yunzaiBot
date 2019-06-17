@@ -7,7 +7,10 @@ $app_config = [
     'baidu_secretKey' => '',
 
     //机器人qq号
-    'bot_qq'          => ''
+    'bot_qq'          => '',
+
+    //管理群
+    'admin_group'     => [],
 ];
 
 //QQ群配置

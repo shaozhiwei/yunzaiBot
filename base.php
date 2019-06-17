@@ -110,3 +110,14 @@ function getMsecTime()
     $msectime =  (float)sprintf('%.0f', (floatval($msec) + floatval($sec)) * 1000);
     return $msectime;
 }
+
+function send_api($param,$type = 1){
+    $queryStr = '?';
+    foreach($param as $key => $value){
+        $queryStr.= ($key.'='.urlencode(is_bool($value)?((int)$value):$value).'&');
+    }
+
+    $result = json_decode(file_get_contents('http://127.0.0.1:5700/'.$type.$queryStr),true);
+
+    return $result;
+}

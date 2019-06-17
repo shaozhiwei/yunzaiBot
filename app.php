@@ -14,23 +14,23 @@ class app
         $this->app_config = $app_config;
     }
 
-    public function repeat($rep_num = 3){
+    //忽略关键字
+    public function ban_word(){
         $msg      = $this->Event['message'];
-        $group_id = $this->Event['group_id'];
-        $txt_path = './tmp/log/repeat_'.$group_id.'.txt';
 
-        //忽略关键字
-        if ($msg == '报时') {
-            return;
-        }
-
-        $bad_word = ['游戏','视频','送礼物','分享','签到','红包','小程序'];
+        $bad_word = ['rich','闪照','游戏','视频','礼物','分享','签到','红包','小程序'];
 
         foreach ($bad_word as $value) {
             if (strpos($msg, $value)) {
                 return_send();
             }
         }
+    }
+
+    public function repeat($rep_num = 3){
+        $msg      = $this->Event['message'];
+        $group_id = $this->Event['group_id'];
+        $txt_path = './tmp/log/repeat_'.$group_id.'.txt';
 
         //读取之前消息
         $qq_msg = file_get_contents($txt_path);
@@ -302,5 +302,93 @@ class app
                 return_send();
             }
         }
+    }
+
+    public function check_ad(){
+        $msg        = $this->Event['message'];
+        $user_id    = $this->Event['user_id'];
+        $group_id   = $this->Event['group_id'];
+        $message_id = $this->Event['message_id'];
+        $che = 0;
+
+        //qq小冰
+        if (in_array($user_id, ['2854196306'])) {
+            return;
+        }
+
+        //需要管理的群
+        if (!in_array($group_id, $this->app_config['admin_group'])) {
+            return;
+        }
+
+        if (strpos($msg, 'CQ:rich') === false) {
+            //去除表情图片
+            $msg = preg_replace("/(?<=\[)[^\]]+/","",$msg);
+        }
+        
+        $length = mb_strlen($msg);
+
+        if ($length<=30) {
+            return;
+        }
+
+        //判断字符串中是否有中文-避免禁言链接
+        if (preg_match("/[\x7f-\xff]/", $msg) == 0) {  
+            return;
+        }
+
+        //聊天消息广告
+        $bad_word = ['色','粉','姐','妹','抱','哥哥','少妇','幼女','屁','淫','群','加'];
+
+        foreach($bad_word as $val){
+            if (strpos($msg, $val) !== false) {
+                $che ++;
+            }
+        }
+
+        $nr = substr_count($msg,"\n\r");
+        $n  = substr_count($msg,"\n");
+
+        //字数
+        if ($length>180) {
+            $che +=1;
+        }
+
+        //换行符
+        if ($n>5 || $nr>5) {
+            $che +=1;
+        }
+
+        //匹配qq群
+        $che += preg_match("/[1-9]\d{5,10}/",$msg);
+
+        //微信号
+        $che += preg_match("/[a-zA-Z]{1}[-_a-zA-Z0-9]{5,19}/",$msg);
+
+        //q
+        $che += preg_match("/[qQ]/",$msg);
+
+        //b
+        $che += preg_match("/bB/",$msg);
+
+        if ($che<2) {
+            return;
+        }
+
+        w_log($user_id.' 等级:'.$che.' '.$this->Event['message'],'ad_log');
+
+        //撤回
+        if ($che>=2) {
+            $res = send_api(['message_id'=>$message_id],'delete_msg');
+            w_log('delete_msg: '.var_export($res,true),'ad_log');
+        }
+        
+        //禁言
+        if ($che>=3) {
+            $res = send_api(['group_id'=>$group_id,'user_id'=>$user_id,'duration'=>600],'set_group_ban');
+            w_log('set_group_ban: '.var_export($res,true),'ad_log');
+        }
+        
+        return_send();
     }
 }

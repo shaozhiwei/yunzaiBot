@@ -9,6 +9,11 @@ date_default_timezone_set('PRC');
 //接收酷q事件 HTTP上报数据
 $Event = json_decode(file_get_contents('php://input'), true);
 
+//测试数据
+// $Event['message'] = '';
+// $Event['user_id'] = '';
+// $Event['message_id'] = -1;
+
 //基础数据
 $msg       = $Event['message'];
 $user_id   = $Event['user_id'];
@@ -29,8 +34,14 @@ if (isset($_config[$group_id])) {
 
 $app = new app($Event,$config,$app_config);
 
+//广告
+$app->check_ad();
+
 //黑名单qq
 $app->check_qq();
+
+//屏蔽关键字
+$app->ban_word();
 
 //回复间隔
 $app->check_time();
